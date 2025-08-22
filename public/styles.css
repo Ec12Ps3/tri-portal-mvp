@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif; margin: 0; background: #0b1020; color: #e6e9f0; }
+a { color: inherit; text-decoration: none; }
+.container { max-width: 960px; margin: 0 auto; padding: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.card { background: #151b2f; border: 1px solid #28304a; padding: 20px; border-radius: 16px; box-shadow: 0 10px 24px rgba(0,0,0,.3); transition: transform .15s ease, border-color .15s; }
+.card:hover { transform: translateY(-2px); border-color: #3e4c77; }
+h1 { font-size: 28px; margin: 16px 0 8px; }
+h2 { font-size: 20px; margin: 16px 0 8px; }
+.foot { opacity: .7; text-align: center; }
+.back { opacity: .8; }
+.new-post { background: #13182b; border: 1px solid #273152; padding: 16px; border-radius: 16px; margin-bottom: 16px; }
+label { display: block; margin-bottom: 12px; font-size: 14px; }
+input, textarea, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #344063; background: #0f1430; color: #e6e9f0; }
+button { padding: 10px 14px; border-radius: 10px; border: 1px solid #3b4a78; background: #1a2350; color: #e6e9f0; cursor: pointer; }
+button:hover { background: #223072; }
+.posts { display: grid; gap: 12px; }
+.post { background: #13182b; border: 1px solid #273152; padding: 16px; border-radius: 16px; }
+.post-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.post-meta { font-size: 12px; opacity: .8; display: flex; gap: 8px; }
+.post-body { white-space: pre-wrap; line-height: 1.6; }
+.chip { padding: 4px 8px; border-radius: 999px; background: #213063; border: 1px solid #3b4a78; font-size: 12px; }
+.reply { margin-top: 8px; padding: 10px; border-radius: 12px; background: #0e1430; border: 1px solid #2a3762; }
+.reply-head { font-size: 12px; opacity: .85; margin-bottom: 6px; }
+.muted { opacity: .7; }
+.admin { display: flex; gap: 10px; align-items: center; }
+.admin-box { margin-top: 10px; }
+.admin-actions { display: grid; gap: 8px; }

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>게시판</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="container">
+    <a href="/" class="back">← 메인으로</a>
+    <h1 id="boardTitle">게시판</h1>
+    <div class="admin">
+      <button id="adminToggle">관리자 모드</button>
+      <span id="adminStatus"></span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="new-post">
+      <h2>문의 남기기</h2>
+      <form id="postForm">
+        <label>이름(선택)
+          <input name="name" placeholder="이름 또는 닉네임" />
+        </label>
+        <label>제목*
+          <input name="title" placeholder="제목을 입력하세요" required />
+        </label>
+        <label>내용*
+          <textarea name="content" rows="6" placeholder="자세히 적어주실수록 좋아요 :)" required></textarea>
+        </label>
+        <button type="submit">등록</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>최근 문의</h2>
+      <div id="posts" class="posts"></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const board = params.get("board");
+    const boardMap = {
+      "computer-quote": "컴퓨터 견적 문의",
+      "code-consult": "코드 의뢰 상담",
+      "ppt-request": "PPT 관련 의뢰"
+    };
+    document.getElementById("boardTitle").textContent = boardMap[board] || "게시판";
+
+    const adminKeyStorageKey = "triportal_admin_key";
+    const adminToggle = document.getElementById("adminToggle");
+    const adminStatus = document.getElementById("adminStatus");
+
+    function getAdminKey() {
+      return localStorage.getItem(adminKeyStorageKey) || "";
+    }
+    function setAdminKey(k) {
+      localStorage.setItem(adminKeyStorageKey, k || "");
+      renderAdminStatus();
+    }
+    function renderAdminStatus() {
+      adminStatus.textContent = getAdminKey() ? "관리자 모드 ON" : "OFF";
+    }
+    adminToggle.addEventListener("click", () => {
+      const current = getAdminKey();
+      const next = prompt("관리자 키를 입력하세요. 빈칸으로 두면 OFF", current || "");
+      setAdminKey(next || "");
+    });
+    renderAdminStatus();
+
+    async function fetchPosts() {
+      const res = await fetch(`/api/${board}/posts`);
+      const list = await res.json();
+      const box = document.getElementById("posts");
+      box.innerHTML = "";
+      if (!Array.isArray(list) || list.length === 0) {
+        box.innerHTML = "<p class='muted'>아직 문의가 없습니다.</p>";
+        return;
+      }
+      for (const p of list) {
+        const el = document.createElement("article");
+        el.className = "post";
+        el.innerHTML = `
+          <div class="post-head">
+            <h3>${escapeHtml(p.title)}</h3>
+            <span class="chip">${escapeHtml(p.status)}</span>
+          </div>
+          <div class="post-meta">
+            <span>${p.name ? escapeHtml(p.name) : "익명"}</span>
+            <span>${new Date(p.created_at).toLocaleString()}</span>
+          </div>
+          <p class="post-body">${escapeHtml(p.content).replace(/\n/g, "<br/>")}</p>
+          <div class="replies">
+            ${(p.replies||[]).map(r => `
+              <div class="reply">
+                <div class="reply-head"><strong>${escapeHtml(r.author || "관리자")}</strong> · ${new Date(r.created_at).toLocaleString()}</div>
+                <div class="reply-body">${escapeHtml(r.content).replace(/\n/g, "<br/>")}</div>
+              </div>
+            `).join("")}
+          </div>
+          <details class="admin-box" ${getAdminKey() ? "open": ""}>
+            <summary>관리자 작업</summary>
+            <div class="admin-actions">
+              <label>상태 변경
+                <select data-action="status" data-id="${p.id}">
+                  ${["접수됨","처리중","완료"].map(s => `<option value="${s}" ${s===p.status?"selected":""}>${s}</option>`).join("")}
+                </select>
+              </label>
+              <label>답변 달기
+                <textarea rows="3" data-action="reply" data-id="${p.id}" placeholder="답변 내용을 입력"></textarea>
+              </label>
+              <button data-action="reply-submit" data-id="${p.id}">등록</button>
+            </div>
+          </details>
+        `;
+        box.appendChild(el);
+      }
+      hookupAdminActions();
+    }
+
+    function hookupAdminActions() {
+      document.querySelectorAll("select[data-action='status']").forEach(sel => {
+        sel.addEventListener("change", async (e) => {
+          const id = sel.getAttribute("data-id");
+          const status = sel.value;
+          await fetch(`/api/${board}/posts/${id}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-key": getAdminKey()
+            },
+            body: JSON.stringify({ status })
+          });
+          fetchPosts();
+        });
+      });
+      document.querySelectorAll("button[data-action='reply-submit']").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-id");
+          const ta = document.querySelector(`textarea[data-action='reply'][data-id='${id}']`);
+          const content = ta.value.trim();
+          if (!content) return alert("내용을 입력하세요");
+          await fetch(`/api/${board}/posts/${id}/replies`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-key": getAdminKey()
+            },
+            body: JSON.stringify({ content, author: "관리자" })
+          });
+          ta.value = "";
+          fetchPosts();
+        });
+      });
+    }
+
+    document.getElementById("postForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        name: fd.get("name"),
+        title: fd.get("title"),
+        content: fd.get("content")
+      };
+      const res = await fetch(`/api/${board}/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        e.target.reset();
+        fetchPosts();
+      } else {
+        const json = await res.json().catch(()=>({}));
+        alert("오류: " + (json.error || res.statusText));
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[s]));
+    }
+
+    fetchPosts();
+  </script>
+</body>
+</html>
