@@ -4,10 +4,13 @@
   "description": "의뢰서비스",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "init:db": "node server.js --init-db"
   },
   "dependencies": {
     "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "sqlite3": "^5.1.6"
   },
   "engines": {
